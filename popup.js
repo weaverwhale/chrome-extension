@@ -1,8 +1,9 @@
 // ----------
 // Constants
 // ----------
-const tableRef = 'recordings'
-// const tableRef = 'staging_recordings'
+// @TODO change this to 'recordings' when ready to go live
+// const tableRef = 'recordings'
+const tableRef = 'staging_recordings'
 
 // ----------
 // Helpers
@@ -55,7 +56,7 @@ function setRecordings(recordings) {
 
     recordings.forEach((recording) => {
       const option = document.createElement('option')
-      const view = recording.url.split('.com/')[1].split('/')[0].split('?')[0]
+      const view = recording?.url?.split('.com/')[1].split('/')[0].split('?')[0]
       const store =
         recording.url.split('shop-id=')[1]?.split('&')[0].replace('.myshopify.com', '') ?? ''
 
@@ -133,8 +134,29 @@ function getRecordings(db) {
   try {
     db.collection(tableRef)
       .get()
-      .then((snapshot) => {
-        const data = snapshot.docs.map((doc) => doc.data())
+      .then(async (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+
+        // fetch all requests for each recording
+        // and add the id to the data
+        await Promise.allSettled(
+          data.map(async (rec, i) => {
+            const requests = await db
+              .collection(tableRef)
+              .doc(rec.id)
+              .collection('requests')
+              .get()
+              .then(async (snapshot) => {
+                const reqSnap = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+
+                // reconstruct the requests object
+                reqSnap.map((request) => {
+                  data[i].requests[request.key] = request.data
+                })
+              })
+          }),
+        )
+
         setRecordings(data)
       })
       .catch((error) => {
@@ -146,8 +168,14 @@ function getRecordings(db) {
   }
 }
 
-function showSuccess() {
+function toggleLoading(show = false) {
   document.getElementById('error').style.display = 'none'
+  document.getElementById('success').style.display = 'none'
+  document.getElementById('loading').style.display = show ? 'inline' : 'none'
+}
+
+function showSuccess() {
+  toggleLoading(false)
 
   const success = document.getElementById('success')
   success.style.display = 'inline'
@@ -158,7 +186,7 @@ function showSuccess() {
 }
 
 function showError() {
-  document.getElementById('success').style.display = 'none'
+  toggleLoading(false)
 
   const error = document.getElementById('error')
   error.style.display = 'inline'
@@ -185,15 +213,15 @@ chrome.storage.local.get('mode', function (items) {
 })
 
 // ----------
+// Firebase
+// ----------
+let app = false
+let db = false
+
+// ----------
 // DCL - Needed for Firebase
 // ----------
 document.addEventListener('DOMContentLoaded', function () {
-  // ----------
-  // Firebase
-  // ----------
-  let app = false
-  let db = false
-
   try {
     const firebaseConfig = {
       apiKey: 'AIzaSyDxtA6hzw-mrGVfSJUNBf1WgoSLjT8rFwc',
@@ -255,37 +283,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('save').addEventListener('click', function (e) {
     e.target.disabled = true
+    toggleLoading(true)
 
     let name = document.getElementById('name').value
 
     chrome.storage.local.get('recordedRequests', function (items) {
       const sanitizedRequests = sanitizeRequests(items.recordedRequests)
       chrome.storage.local.set({ recordedRequests: sanitizedRequests })
-      chrome.tabs.getSelected(null, function (tab) {
+      chrome.tabs.getSelected(null, async function (tab) {
         if (db && items.recordedRequests) {
-          // @TODO - Improvement
-          // use cloud storage for this file
-          // if greater than 1mb
-          // then reference it below
-          // https://firebase.google.com/docs/storage/web/upload-files
-          db.collection(tableRef)
+          // create a new document in the recordings collection
+          await db
+            .collection(tableRef)
             .add({
               date: new Date(),
               title: tab.title,
               url: tab.url,
               name: name,
-              requests: sanitizedRequests,
             })
-            .then(function (docRef) {
-              showSuccess()
+            .then(async function (docRef) {
               console.log('Document written with ID: ', docRef.id)
+              console.log('adding requests...')
+              const requestsCollection = await db
+                .collection(tableRef)
+                .doc(docRef.id)
+                .collection('requests')
+
+              // add each request to the requests subcollection
+              // and wait for all to finish
+              // @TODO maybe we can batch this?
+              // https://firebase.google.com/docs/firestore/manage-data/transactions#web-namespaced-api_2
+              await Promise.allSettled(
+                Object.keys(sanitizedRequests).map(async (request, i) => {
+                  await requestsCollection
+                    .doc()
+                    .set({ key: request, data: sanitizedRequests[request] }, { merge: true })
+                    .then(() => {
+                      console.log('added request', request)
+                    })
+                    .catch(function (error) {
+                      console.error('Error adding request', request, error)
+                    })
+                }),
+              )
+
+              showSuccess()
               getRecordings(db)
+              e.target.disabled = false
+              console.log('done adding requests')
             })
             .catch(function (error) {
               showError()
               console.error('Error adding document: ', error)
-            })
-            .finally(() => {
               e.target.disabled = false
             })
         } else {
