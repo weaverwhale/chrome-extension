@@ -59,7 +59,7 @@ function setRecordings(recordings) {
 
     recordings.forEach((recording) => {
       const option = document.createElement('option')
-      const view = recording?.url?.split('.com/')[1].split('/')[0].split('?')[0]
+      const view = recording.url.split('.com/')[1].split('/')[0].split('?')[0]
       const store =
         recording.url.split('shop-id=')[1]?.split('&')[0].replace('.myshopify.com', '') ?? ''
 
@@ -143,39 +143,39 @@ function getRecordings(db) {
         // fetch all requests for each recording
         // and add the id to the data
         let requests = await Promise.allSettled(
-          data.map(async (rec, i) => {
+          data.map(async (rec) => {
             return await db
               .collection(tableRef)
               .doc(rec.id)
               .collection('requests')
               .get()
               .then(async (snapshot) => {
-                const reqSnap = await snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-
-                // reconstruct the requests object
-                reqSnap.map((request) => {
-                  try {
-                    if (!!request.chunk) {
-                      if (data.requests[request.key] && data.requests[request.key].length > 0)
-                        return
-
-                      const formattedData = reqSnap
-                        .filter((rec) => rec.key === request.key)
-                        .sort((a, b) => a.chunkIndex - b.chunkIndex)
-                        .map((rec) => rec.data)
-                        .join('')
-
-                      data[i].requests[request.key] = formattedData
-                    } else {
-                      data[i].requests[request.key] = request.data
-                    }
-                  } catch {}
-                })
-
-                return reqSnap
+                return await snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
               })
           }),
         )
+
+        // reconstruct the requests object
+        await requests.map(async (snapshot, i) => {
+          const reqSnap = snapshot.value
+          reqSnap.map((request) => {
+            try {
+              if (!!request.chunk) {
+                const formattedData = reqSnap
+                  .filter((rec) => rec.key === request.key)
+                  .sort((a, b) => a.chunkIndex - b.chunkIndex)
+                  .map((rec) => rec.data)
+                  .join('')
+
+                data[i].requests[request.key] = formattedData
+              } else {
+                data[i].requests[request.key] = request.data
+              }
+            } catch (e) {
+              console.error(e)
+            }
+          })
+        })
 
         console.log('requests', requests)
         console.log('data', data)
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
               // now each of these has a 1mb limit
               await Promise.allSettled(
                 Object.keys(sanitizedRequests).map(async (request, i) => {
-                  await new Promise((resolve) => setTimeout(resolve, i * 1000))
+                  await new Promise((resolve) => setTimeout(resolve, i * 500))
                   // determine whether the data is too large
                   // if so, split it into chunks
                   // then each chunk has 1mb limit
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function () {
                   if (size >= limit && chunks.length > 1) {
                     await Promise.allSettled(
                       chunks.map(async (chunk, j) => {
-                        await new Promise((resolve) => setTimeout(resolve, i * j * 1000))
+                        await new Promise((resolve) => setTimeout(resolve, j * 500))
 
                         await requestsCollection
                           .doc()
