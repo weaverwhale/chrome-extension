@@ -1,13 +1,16 @@
 // ----------
 // Constants
 // ----------
-// @TODO change this to 'recordings' when ready to go live
 // const tableRef = 'recordings'
 const tableRef = 'staging_recordings'
 
 // ----------
 // Helpers
 // ----------
+function chunkString(str, length) {
+  return str.match(new RegExp('.{1,' + length + '}', 'g'))
+}
+
 function formatBytes(bytes, decimals = 2) {
   if (!+bytes) return '0 Bytes'
 
@@ -23,15 +26,15 @@ function formatBytes(bytes, decimals = 2) {
 function setSizes() {
   chrome.storage.local.get('recordedRequests', function (items) {
     const size = JSON.stringify(items.recordedRequests || '').length
-    if (items.recordedRequests.length > 500 || size <= 2) {
+    const keysSize = Object.keys(items.recordedRequests || {}).length
+
+    if (keysSize >= 500 || size <= 2) {
       document.getElementById('save').disabled = true
     } else {
       document.getElementById('save').disabled = false
     }
 
     document.getElementById('size').innerHTML = `${formatBytes(size)} in-cache`
-
-    const keysSize = Object.keys(items.recordedRequests || {}).length
     chrome.browserAction.setBadgeText({
       text: `${keysSize > 0 ? keysSize : ''}`,
     })
@@ -76,8 +79,8 @@ function setRecordings(recordings) {
 function sanitizeRequests(requests) {
   let req = requests
   let keys = [
-    // - 'name' is a common key
-    // - we have special name checks below
+    // 'name' is a common key
+    // we have special name checks below
     'name',
     'firstName',
     'lastName',
@@ -135,27 +138,52 @@ function getRecordings(db) {
     db.collection(tableRef)
       .get()
       .then(async (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        let data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data(), requests: {} }))
 
         // fetch all requests for each recording
         // and add the id to the data
-        await Promise.allSettled(
+        let requests = await Promise.allSettled(
           data.map(async (rec, i) => {
-            const requests = await db
+            // wait a little to avoid rate limiting
+            // future: batch
+            // https://firebase.google.com/docs/firestore/manage-data/transactions#batched-writes
+            await setTimeout(() => {}, 330)
+
+            return await db
               .collection(tableRef)
               .doc(rec.id)
               .collection('requests')
               .get()
               .then(async (snapshot) => {
-                const reqSnap = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+                const reqSnap = await snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
 
                 // reconstruct the requests object
                 reqSnap.map((request) => {
-                  data[i].requests[request.key] = request.data
+                  try {
+                    if (!!request.chunk) {
+                      if (data.requests[request.key] && data.requests[request.key].length > 0)
+                        return
+
+                      const formattedData = reqSnap
+                        .filter((rec) => rec.key === request.key)
+                        .sort((a, b) => a.chunkIndex - b.chunkIndex)
+                        .map((rec) => rec.data)
+                        .join('')
+
+                      data[i].requests[request.key] = formattedData
+                    } else {
+                      data[i].requests[request.key] = request.data
+                    }
+                  } catch {}
                 })
+
+                return reqSnap
               })
           }),
         )
+
+        console.log('requests', requests)
+        console.log('data', data)
 
         setRecordings(data)
       })
@@ -311,19 +339,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
               // add each request to the requests subcollection
               // and wait for all to finish
-              // @TODO maybe we can batch this?
-              // https://firebase.google.com/docs/firestore/manage-data/transactions#web-namespaced-api_2
+              // ---
+              // This circumvents the 1mb document limit on the parent
+              // now each of these has a 1mb limit
               await Promise.allSettled(
                 Object.keys(sanitizedRequests).map(async (request, i) => {
-                  await requestsCollection
-                    .doc()
-                    .set({ key: request, data: sanitizedRequests[request] }, { merge: true })
-                    .then(() => {
-                      console.log('added request', request)
-                    })
-                    .catch(function (error) {
-                      console.error('Error adding request', request, error)
-                    })
+                  // determine whether the data is too large
+                  // if so, split it into chunks
+                  // then each chunk has 1mb limit
+                  const size = JSON.stringify(sanitizedRequests[request]).length
+                  const limit = 1000000
+                  const chunks = chunkString(JSON.stringify(sanitizedRequests[request]), limit)
+
+                  if (size >= limit && chunks.length > 1) {
+                    await Promise.allSettled(
+                      chunks.map(async (chunk, i) => {
+                        await requestsCollection
+                          .doc()
+                          .set(
+                            { chunk: true, chunkIndex: i, key: request, data: chunk },
+                            { merge: true },
+                          )
+                          .then(() => {
+                            console.log('added request chunk', request, i)
+                          })
+                          .catch(function (error) {
+                            console.error('Error adding request chunk', request, i, error)
+                          })
+                      }),
+                    )
+                  } else {
+                    await requestsCollection
+                      .doc()
+                      .set({ key: request, data: sanitizedRequests[request] }, { merge: true })
+                      .then(() => {
+                        console.log('added request', request)
+                      })
+                      .catch(function (error) {
+                        console.error('Error adding request', request, error)
+                      })
+                  }
                 }),
               )
 

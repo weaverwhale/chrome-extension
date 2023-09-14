@@ -126,7 +126,12 @@ function generateKey(details, includeBody) {
 function isGoodRequest(url, method) {
   if (!url || url.includes('chrome') || url.includes('lotties')) return false
   if (method && method === 'OPTIONS') return false
-  if (url.includes('triplewhale.com') || url.includes('shopify') || url.includes('facebook'))
+  if (
+    url.includes('triplewhale') ||
+    url.includes('whale3') ||
+    url.includes('shopify') ||
+    url.includes('facebook')
+  )
     return true
   return false
 }
