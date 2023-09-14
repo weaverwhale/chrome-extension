@@ -339,6 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
               // now each of these has a 1mb limit
               await Promise.allSettled(
                 Object.keys(sanitizedRequests).map(async (request, i) => {
+                  await new Promise((resolve) => setTimeout(resolve, i * 1000))
                   // determine whether the data is too large
                   // if so, split it into chunks
                   // then each chunk has 1mb limit
@@ -348,11 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                   if (size >= limit && chunks.length > 1) {
                     await Promise.allSettled(
-                      chunks.map(async (chunk, i) => {
+                      chunks.map(async (chunk, j) => {
+                        await new Promise((resolve) => setTimeout(resolve, i * j * 1000))
+
                         await requestsCollection
                           .doc()
                           .set(
-                            { chunk: true, chunkIndex: i, key: request, data: chunk },
+                            { chunk: true, chunkIndex: j, key: request, data: chunk },
                             { merge: true },
                           )
                           .then(() => {
