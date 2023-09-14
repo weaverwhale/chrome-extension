@@ -144,11 +144,6 @@ function getRecordings(db) {
         // and add the id to the data
         let requests = await Promise.allSettled(
           data.map(async (rec, i) => {
-            // wait a little to avoid rate limiting
-            // future: batch
-            // https://firebase.google.com/docs/firestore/manage-data/transactions#batched-writes
-            await setTimeout(() => {}, 330)
-
             return await db
               .collection(tableRef)
               .doc(rec.id)
