@@ -1,8 +1,8 @@
 // ----------
 // Constants
 // ----------
-// const tableRef = 'recordings'
-const tableRef = 'staging_recordings'
+const tableRef = 'recordings'
+// const tableRef = 'staging_recordings'
 
 // ----------
 // Helpers
