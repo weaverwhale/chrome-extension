@@ -58,6 +58,8 @@ function setRecordings(recordings) {
     recordingsList.appendChild(disabledOption)
 
     recordings.forEach((recording) => {
+      if (!recording.url || !recording.url.includes('.com')) return
+
       const option = document.createElement('option')
       const view = recording.url.split('.com/')[1].split('/')[0].split('?')[0]
       const store =
@@ -74,6 +76,15 @@ function setRecordings(recordings) {
       recordingsList.appendChild(option)
     })
   }
+}
+
+function setProgress(progress) {
+  const progressEl = document.getElementById('progress')
+  progressEl.value = progress
+  progressEl.innerHTML = `${progress}%`
+
+  const percentageEl = document.getElementById('percentage')
+  percentageEl.innerHTML = `${progress}%`
 }
 
 function sanitizeRequests(requests) {
@@ -177,9 +188,7 @@ function getRecordings(db) {
           })
         })
 
-        console.log('requests', requests)
-        console.log('data', data)
-
+        console.log('firebase data', data)
         setRecordings(data)
       })
       .catch((error) => {
@@ -306,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('save').addEventListener('click', function (e) {
     e.target.disabled = true
+    setProgress(0)
     toggleLoading(true)
 
     let name = document.getElementById('name').value
@@ -331,6 +341,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 .collection(tableRef)
                 .doc(docRef.id)
                 .collection('requests')
+              const requests = Object.keys(sanitizedRequests)
+              const fraction = 100 / requests.length
+              let progress = 0
 
               // add each request to the requests subcollection
               // and wait for all to finish
@@ -338,34 +351,34 @@ document.addEventListener('DOMContentLoaded', function () {
               // This circumvents the 1mb document limit on the parent
               // now each of these has a 1mb limit
               await Promise.allSettled(
-                Object.keys(sanitizedRequests).map(async (request, i) => {
-                  await new Promise((resolve) => setTimeout(resolve, i * 500))
+                requests.map(async (request, i) => {
                   // determine whether the data is too large
                   // if so, split it into chunks
                   // then each chunk has 1mb limit
                   const size = JSON.stringify(sanitizedRequests[request]).length
                   const limit = 1000000
                   const chunks = chunkString(JSON.stringify(sanitizedRequests[request]), limit)
+                  const batch = db.batch()
 
                   if (size >= limit && chunks.length > 1) {
-                    await Promise.allSettled(
-                      chunks.map(async (chunk, j) => {
-                        await new Promise((resolve) => setTimeout(resolve, j * 500))
+                    await chunks.map(async (chunk, j) => {
+                      var newDocRef = requestsCollection.doc()
 
-                        await requestsCollection
-                          .doc()
-                          .set(
-                            { chunk: true, chunkIndex: j, key: request, data: chunk },
-                            { merge: true },
-                          )
-                          .then(() => {
-                            console.log('added request chunk', request, i)
-                          })
-                          .catch(function (error) {
-                            console.error('Error adding request chunk', request, i, error)
-                          })
-                      }),
-                    )
+                      await batch.set(
+                        newDocRef,
+                        { chunk: true, chunkIndex: j, key: request, data: chunk },
+                        { merge: true },
+                      )
+
+                      console.log('added chunk to batch', request, j)
+                    })
+
+                    try {
+                      await batch.commit()
+                      console.log('batch committed', request)
+                    } catch {
+                      console.error('Error committing batch', request)
+                    }
                   } else {
                     await requestsCollection
                       .doc()
@@ -377,6 +390,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.error('Error adding request', request, error)
                       })
                   }
+
+                  // update progress bar
+                  progress += fraction
+                  setProgress(parseInt(progress))
+
+                  // add a little delay to prevent throttling
+                  await new Promise((resolve) => setTimeout(resolve, i * 100))
                 }),
               )
 

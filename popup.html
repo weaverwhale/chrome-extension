@@ -19,7 +19,10 @@
       <div class="form-row">
         <input id="name" placeholder="File Name" />
         <button id="save" disabled>Save to Firebase</button>
-        <span style="display: none" id="loading">&#x23F3; Saving</span>
+        <div style="display: none" id="loading">
+          <progress id="progress" style="display: block" max="100" value="0"></progress>
+          <span>&#x23F3; Saving - <span id="percentage"></span></span>
+        </div>
         <span style="display: none" id="success">&#x2705; Saved</span>
         <span style="display: none" id="error">&#x274C; Error</span>
       </div>
@@ -33,7 +36,7 @@
       <small id="version">
         <img src="./images/icon.png" width="11" height="11" />
         <!-- match manifest -->
-        v1.1.4
+        v1.1.5
       </small>
     </div>
     <script src="./popup.js" type="module"></script>
