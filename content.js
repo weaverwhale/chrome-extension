@@ -85,7 +85,8 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .orders-table #tr-pixel-order-widget-customer-name,
     #tw-playback img[alt="shop logo"] .text-white,
     #tw-playback .creative-thumbnail,
-    #tw-playback .CreativeCard img
+    #tw-playback .CreativeCard img,
+    #tw-playback .timeline-item-content img
     {
       filter: blur(3px);
     }
