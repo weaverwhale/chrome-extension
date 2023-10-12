@@ -83,7 +83,9 @@ document.addEventListener('DOMContentLoaded', function () {
   styleSheet.innerText = `
     [data-id="redacted"],
     #tw-playback .orders-table #tr-pixel-order-widget-customer-name,
-    #tw-playback img[alt="shop logo"] .text-white
+    #tw-playback img[alt="shop logo"] .text-white,
+    #tw-playback .creative-thumbnail,
+    #tw-playback .CreativeCard img
     {
       filter: blur(3px);
     }
