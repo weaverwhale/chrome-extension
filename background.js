@@ -85,7 +85,7 @@ function getMode() {
 }
 
 function generateKey(details, includeBody) {
-  const formattedURL = details.url.split('?')[0]
+  const formattedURL = details.url.replace(/(^\w+:|^)\/\//, '')
 
   if (includeBody) {
     if (
