@@ -83,12 +83,30 @@ document.addEventListener('DOMContentLoaded', function () {
   styleSheet.innerText = `
     [data-id="redacted"],
     #tw-playback .orders-table #tr-pixel-order-widget-customer-name,
-    #tw-playback img[alt="shop logo"] .text-white,
-    #tw-playback .creative-thumbnail,
-    #tw-playback .CreativeCard img,
-    #tw-playback .timeline-item-content img
+    #tw-playback img[alt="shop logo"] .text-white
     {
       filter: blur(3px);
+    }
+
+    #tw-playback .tw-image,
+    #tw-playback .mantine-Group-root
+    {
+      overflow: hidden;
+    }
+
+    #tw-playback .tw-image:after
+    {
+      content: '';
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      overflow: hidden;
+      top: 0;
+      left: 0;
+      background-image: url(https://app.triplewhale.com/triplewhale_sticker-1.png) !important;
+      background-position: center;
+      background-size: 150%;
+      background-repeat: no-repeat;
     }
   `
   document.head.appendChild(styleSheet)
