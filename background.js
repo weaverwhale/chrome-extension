@@ -195,9 +195,11 @@ const bodyRecordingFunction = function (details) {
     details.requestBody.raw[0].bytes &&
     !details.message
   ) {
-    const key = generateKey(details)
+    const key = generateKey(details, true)
 
     try {
+      logger(`Success parsing body for: ${key}`, 'success')
+
       cachedEndpointBodies[key] = JSON.parse(
         decodeURIComponent(
           String.fromCharCode.apply(null, new Uint8Array(details.requestBody.raw[0].bytes)),
@@ -215,7 +217,7 @@ const recordingFunction = function (details) {
   const method = details && details.method ? details.method : false
 
   if (isGoodRequest(url, method)) {
-    const key = generateKey(details)
+    const key = generateKey(details, true)
     let token = getToken(details.requestHeaders)
     const cacheKey = `${key}${details.requestHeaders}`
 
@@ -271,22 +273,19 @@ const recordingFunction = function (details) {
 // Playback Network Requests
 // ----------
 const playbackFunction = function (req) {
-  if (!isGoodRequest(req.url, req.method)) return
-  if (Object.keys(recordedRequests).length === 0) return
+  if (isGoodRequest(req.url, req.method) && Object.keys(recordedRequests).length > 0) {
+    const key = generateKey(req, true)
+    if (!key) return
 
-  const key = generateKey(req, true)
-  if (!key) return
+    const recordedResponse = recordedRequests[key]
+    if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
+      logger(`${req.method} request intercepted: ${key}`, 'success')
 
-  const recordedResponse = recordedRequests[key]
-  if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
-    logger(`${req.method} request intercepted: ${key}`, 'success')
-
-    return {
-      redirectUrl: 'data:text/html;charset=utf-8,' + encodeURIComponent(recordedResponse),
+      return {
+        redirectUrl: 'data:text/html;charset=utf-8,' + JSON.stringify(recordedResponse),
+      }
+    } else {
+      logger(`No recorded response for ${key}`, 'error')
     }
-  } else {
-    logger(`No recorded response for ${key}`, 'error')
   }
-
-  return
 }
