@@ -35,10 +35,12 @@ function convertHeadersArrayToObject(array) {
 }
 
 function hashCode(s) {
-  return s.split('').reduce(function (a, b) {
-    a = (a << 5) - a + b.charCodeAt(0)
-    return a & a
-  }, 0)
+  return Math.abs(
+    s.split('').reduce(function (a, b) {
+      a = (a << 5) - a + b.charCodeAt(0)
+      return a & a
+    }, 0),
+  )
 }
 
 let recordedRequests = {}
@@ -85,7 +87,9 @@ function getMode() {
 }
 
 function generateKey(details, includeBody) {
-  const formattedURL = details.url.replace(/(^\w+:|^)\/\//, '')
+  const formattedURL = details.url
+
+  console.log(formattedURL)
 
   if (includeBody) {
     if (
@@ -195,10 +199,10 @@ const bodyRecordingFunction = function (details) {
     details.requestBody.raw[0].bytes &&
     !details.message
   ) {
-    const key = generateKey(details, true)
+    const key = generateKey(details)
 
     try {
-      logger(`Success parsing body for: ${key}`, 'success')
+      logger(`Success caching body for: ${key}`, 'success')
 
       cachedEndpointBodies[key] = JSON.parse(
         decodeURIComponent(
@@ -217,7 +221,7 @@ const recordingFunction = function (details) {
   const method = details && details.method ? details.method : false
 
   if (isGoodRequest(url, method)) {
-    const key = generateKey(details, true)
+    const key = generateKey(details)
     let token = getToken(details.requestHeaders)
     const cacheKey = `${key}${details.requestHeaders}`
 
@@ -239,8 +243,11 @@ const recordingFunction = function (details) {
       }
 
       if (method === 'POST' && cachedEndpointBodies[key]) {
+        console.log('have body', cachedEndpointBodies[key])
         params.body = JSON.stringify(cachedEndpointBodies[key])
       }
+
+      console.log(details.url, params, cachedEndpointBodies)
 
       fetch(details.url, params)
         .then((response) => response.text())
@@ -248,7 +255,7 @@ const recordingFunction = function (details) {
           chrome.storage.local.get('recordedRequests', function (items) {
             const recordedRequests = items.recordedRequests || {}
 
-            if (res && !res.error) {
+            if (res && !res.error && !res.includes('message') && !res.includes('error')) {
               const key = generateKey(details, params.body)
               recordedRequests[key] = res
               chrome.storage.local.set({ recordedRequests: recordedRequests })
@@ -277,8 +284,6 @@ const playbackFunction = function (req) {
     const key = generateKey(req, true)
     if (key) {
       const recordedResponse = recordedRequests[key]
-
-      console.log('recordedResponse', recordedResponse)
 
       if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
         logger(`${req.method} request intercepted: ${key}`, 'success')
