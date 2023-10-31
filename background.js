@@ -275,17 +275,20 @@ const recordingFunction = function (details) {
 const playbackFunction = function (req) {
   if (isGoodRequest(req.url, req.method) && Object.keys(recordedRequests).length > 0) {
     const key = generateKey(req, true)
-    if (!key) return
+    if (key) {
+      const recordedResponse = recordedRequests[key]
 
-    const recordedResponse = recordedRequests[key]
-    if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
-      logger(`${req.method} request intercepted: ${key}`, 'success')
+      console.log('recordedResponse', recordedResponse)
 
-      return {
-        redirectUrl: 'data:text/html;charset=utf-8,' + JSON.stringify(recordedResponse),
+      if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
+        logger(`${req.method} request intercepted: ${key}`, 'success')
+
+        return {
+          redirectUrl: 'data:text/html;charset=utf-8,' + encodeURIComponent(recordedResponse),
+        }
+      } else {
+        logger(`No recorded response for ${key}`, 'error')
       }
-    } else {
-      logger(`No recorded response for ${key}`, 'error')
     }
   }
 }
