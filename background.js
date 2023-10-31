@@ -89,8 +89,6 @@ function getMode() {
 function generateKey(details, includeBody) {
   const formattedURL = details.url
 
-  console.log(formattedURL)
-
   if (includeBody) {
     if (
       details.requestBody &&
@@ -243,11 +241,8 @@ const recordingFunction = function (details) {
       }
 
       if (method === 'POST' && cachedEndpointBodies[key]) {
-        console.log('have body', cachedEndpointBodies[key])
         params.body = JSON.stringify(cachedEndpointBodies[key])
       }
-
-      console.log(details.url, params, cachedEndpointBodies)
 
       fetch(details.url, params)
         .then((response) => response.text())
