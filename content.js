@@ -88,7 +88,8 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .CreativeCard img,
     #tw-playback .timeline-item-content img,
     #tw-playback .attribution-collapsible img,
-    #tw-playback .timeline-item-link a
+    #tw-playback .timeline-item-link a,
+    #tw-playback .attribution-orders-table td .Polaris-Link
     {
       filter: blur(5px);
     }
