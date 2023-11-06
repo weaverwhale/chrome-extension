@@ -87,7 +87,8 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .creative-thumbnail,
     #tw-playback .CreativeCard img,
     #tw-playback .timeline-item-content img,
-    #tw-playback .attribution-collapsible img
+    #tw-playback .attribution-collapsible img,
+    #tw-playback .timeline-item-link a
     {
       filter: blur(5px);
     }
