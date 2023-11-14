@@ -93,6 +93,8 @@ function sanitizeRequests(requests) {
     // 'name' is a common key
     // we have special name checks below
     'name',
+    // title is also common, but used in products so we need to keep it
+    'title',
     'firstName',
     'lastName',
     'email',

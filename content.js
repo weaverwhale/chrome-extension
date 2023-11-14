@@ -87,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .creative-thumbnail,
     #tw-playback .CreativeCard img,
     #tw-playback .timeline-item-content img,
+    #tw-playback .timeline-item-content .Polaris-Caption:first-of-type,
     #tw-playback .attribution-collapsible img,
     #tw-playback .timeline-item-link a,
     #tw-playback .attribution-orders-table td .Polaris-Link
