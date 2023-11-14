@@ -33,11 +33,17 @@
         </select>
         <button id="load" disabled>Load from Firebase</button>
       </div>
-      <small id="version">
-        <img src="./images/icon.png" width="11" height="11" />
-        <!-- match manifest -->
-        v1.1.11
-      </small>
+      <div class="form-row">
+        <div class="checkbox">
+          <input id="popup" type="checkbox" />
+          <label for="popup"><small>Open playback in popup?</small></label>
+        </div>
+        <small id="version">
+          <img src="./images/icon.png" width="11" height="11" />
+          <!-- match manifest -->
+          v1.1.12
+        </small>
+      </div>
     </div>
     <script src="./popup.js" type="module"></script>
   </body>

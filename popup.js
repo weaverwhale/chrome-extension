@@ -232,6 +232,12 @@ function showError() {
 // ----------
 // Chrome Storage
 // ----------
+let openInNewPopup = false
+chrome.storage.local.get('openInNewPopup', function (val) {
+  openInNewPopup = !!val || false
+  document.getElementById('popup').checked = openInNewPopup
+})
+
 chrome.storage.onChanged.addListener(setSizes)
 chrome.storage.local.get('recordedRequests', setSizes)
 chrome.storage.local.get('mode', function (items) {
@@ -296,8 +302,6 @@ document.addEventListener('DOMContentLoaded', function () {
     chrome.storage.local.get('recordedRequests', function (items) {
       const sanitizedRequests = sanitizeRequests(items.recordedRequests)
       chrome.storage.local.set({ recordedRequests: sanitizedRequests })
-
-      debugger
 
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         chrome.tabs.reload(tabs[0].id)
@@ -433,11 +437,24 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('playback').click()
     }
 
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      chrome.tabs.update(tabs[0].id, { url: data.url }, function () {
-        chrome.runtime.reload()
-        window.close()
+    if (openInNewPopup) {
+      chrome.windows.create({
+        url: data.url,
+        type: 'popup',
       })
-    })
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.tabs.update(tabs[0].id, { url: data.url }, function () {
+          chrome.runtime.reload()
+          window.close()
+        })
+      })
+    }
+  })
+
+  document.getElementById('popup').addEventListener('change', function (e) {
+    console.log(e, e.target.checked)
+    chrome.storage.local.set({ openInNewPopup: e.target.checked })
+    openInNewPopup = e.target.checked
   })
 })

@@ -18,6 +18,11 @@
   grid-gap: 3px;
 }
 
+#tw-extension .checkbox {
+  display: flex;
+  align-items: center;
+}
+
 #tw-extension select {
   width: 100%;
 }
