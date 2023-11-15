@@ -229,6 +229,17 @@ function showError() {
   }, 3000)
 }
 
+function closePopupWindows() {
+  chrome.storage.local.get({ popupWindows: [] }, function (result) {
+    const w = (result && result.popupWindows) || []
+    w.forEach(({ id }) => {
+      try {
+        chrome.windows.remove(id)
+      } catch {}
+    })
+  })
+}
+
 // ----------
 // Chrome Storage
 // ----------
@@ -240,7 +251,7 @@ chrome.storage.local.get('openInNewPopup', function (val) {
 
 chrome.storage.onChanged.addListener(setSizes)
 chrome.storage.local.get('recordedRequests', setSizes)
-chrome.storage.local.get('mode', function (items) {
+chrome.storage.local.get('mode', (items) => {
   const mode = items.mode
 
   if (mode === 'record') {
@@ -311,6 +322,7 @@ document.addEventListener('DOMContentLoaded', function () {
   })
 
   document.getElementById('reset').addEventListener('click', function () {
+    closePopupWindows()
     chrome.storage.local.clear()
     document.getElementById('playback').classList.remove('active')
     document.getElementById('record').classList.remove('active')
@@ -438,10 +450,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (openInNewPopup) {
-      chrome.windows.create({
-        url: data.url,
-        type: 'popup',
-      })
+      chrome.windows.create(
+        {
+          url: data.url,
+          type: 'popup',
+        },
+        (window) => {
+          chrome.storage.local.get({ popupWindows: [] }, function (result) {
+            const w = (result && result.popupWindows) || []
+            chrome.storage.local.set({ popupWindows: [...w, window] })
+          })
+        },
+      )
     } else {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         chrome.tabs.update(tabs[0].id, { url: data.url }, function () {
