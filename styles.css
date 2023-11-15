@@ -23,6 +23,10 @@
   align-items: center;
 }
 
+#tw-extension .checkbox input {
+  margin: 0 4px 0 0;
+}
+
 #tw-extension select {
   width: 100%;
 }
