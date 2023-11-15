@@ -104,6 +104,7 @@ function sanitizeRequests(requests) {
     'last_name',
     'address1',
     'address2',
+    'campaign',
     'campaignName',
     'adsetName',
   ]
@@ -111,9 +112,9 @@ function sanitizeRequests(requests) {
   let allowedNameString = [
     // cdp
     'segment-members',
-    // store data
-    'get-customers',
     // customer data
+    'get-customers',
+    // store data
     'get-orders',
   ]
 

@@ -88,6 +88,8 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .CreativeCard img,
     #tw-playback .timeline-item-content img,
     #tw-playback .timeline-item-content .Polaris-Caption:first-of-type,
+    #tw-playback .Polaris-ResourceItem__Content h3,
+    #tw-playback .pixel-campaign-list:last-of-type .Polaris-TextStyle--variationStrong,
     #tw-playback .attribution-collapsible img,
     #tw-playback .timeline-item-link a,
     #tw-playback .attribution-orders-table td .Polaris-Link
