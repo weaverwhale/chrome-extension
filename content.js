@@ -92,7 +92,8 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .pixel-campaign-list:last-of-type .Polaris-TextStyle--variationStrong,
     #tw-playback .attribution-collapsible img,
     #tw-playback .timeline-item-link a,
-    #tw-playback .attribution-orders-table td .Polaris-Link
+    #tw-playback .attribution-orders-table td .Polaris-Link,
+    #tw-playback .mantine-AppShell-section:first-of-type .mantine-Text-root
     {
       filter: blur(5px);
     }
