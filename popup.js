@@ -107,6 +107,7 @@ function sanitizeRequests(requests) {
     'campaign',
     'campaignName',
     'adsetName',
+    'value',
   ]
 
   let allowedNameString = [
@@ -118,11 +119,36 @@ function sanitizeRequests(requests) {
     'get-orders',
   ]
 
+  let willyStrings = ['load-saved-query']
+  let willyKeys = ['ad_copy', 'ad_image_url']
+
   Object.keys(req).forEach((key) => {
     keys.forEach((k) => {
       try {
         if (req[key].includes(k)) {
           const re = new RegExp(`"${k}":\s*"[^"]+?([^\/"]+)"`, 'g')
+          // if willy, we need to parse the data and sift that way
+          if (willyStrings.filter((string) => key.includes(string)).length > 0) {
+            let data = JSON.parse(req[key])
+            if (data.data && data.data.length > 0) {
+              data.data = data.data.map((d) => {
+                if (willyKeys.includes(d.name)) {
+                  if (Array.isArray(d.value)) {
+                    d.value = d.value.map(() => '[REDACTED] [REDACTED] [REDACTED]')
+                  } else {
+                    d.value = '[REDACTED] [REDACTED] [REDACTED]'
+                  }
+                }
+
+                return d
+              })
+            }
+
+            // set the data back to the request
+            req[key] = JSON.stringify(data)
+
+            return
+          }
 
           if (k === 'name' || k === 'productName') {
             // if name, only allow strings provided above
@@ -144,7 +170,7 @@ function sanitizeRequests(requests) {
     })
   })
 
-  return req
+  return requests
 }
 
 function getRecordings(db) {

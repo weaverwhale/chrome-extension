@@ -221,10 +221,9 @@ const recordingFunction = function (details) {
   if (isGoodRequest(url, method)) {
     const key = generateKey(details)
     let token = getToken(details.requestHeaders)
-    const cacheKey = `${key}${details.requestHeaders}`
 
-    if (!cachedEndpointRequests.includes(cacheKey)) {
-      cachedEndpointRequests.push(cacheKey)
+    if (!cachedEndpointRequests.includes(key)) {
+      cachedEndpointRequests.push(key)
 
       var params = {
         method: method,
@@ -249,21 +248,23 @@ const recordingFunction = function (details) {
         .then((res) => {
           chrome.storage.local.get('recordedRequests', function (items) {
             const recordedRequests = items.recordedRequests || {}
+            let didntRecord = false
 
-            if (res && !res.error && !res.includes('message') && !res.includes('error')) {
-              const key = generateKey(details, params.body)
+            if (res && (!res.includes('error') || !(res.error && res.error.length > 0))) {
+              const key = generateKey(details)
               recordedRequests[key] = res
               chrome.storage.local.set({ recordedRequests: recordedRequests })
               logger(`${details.method} request recorded: ${key}`, 'warning')
             } else {
               logger(`${details.method} request could not be recorded: ${key}`, 'error')
+              didntRecord = true
             }
 
-            if (method === 'POST' || !res || res.error) {
+            if (method === 'POST' || didntRecord) {
               // As well as on failure,
               // always remove POST requests from cache
               // to allow for new POSTS requests with different bodies to be recorded
-              cachedEndpointRequests = cachedEndpointRequests.filter((item) => item !== cacheKey)
+              cachedEndpointRequests = cachedEndpointRequests.filter((item) => item !== key)
             }
           })
         })
@@ -276,7 +277,7 @@ const recordingFunction = function (details) {
 // ----------
 const playbackFunction = function (req) {
   if (isGoodRequest(req.url, req.method) && Object.keys(recordedRequests).length > 0) {
-    const key = generateKey(req, true)
+    const key = generateKey(req)
     if (key) {
       const recordedResponse = recordedRequests[key]
 
