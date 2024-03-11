@@ -251,7 +251,7 @@ const recordingFunction = function (details) {
             let didntRecord = false
 
             if (res && (!res.includes('error') || !(res.error && res.error.length > 0))) {
-              const key = generateKey(details)
+              const key = generateKey(details, params.body)
               recordedRequests[key] = res
               chrome.storage.local.set({ recordedRequests: recordedRequests })
               logger(`${details.method} request recorded: ${key}`, 'warning')

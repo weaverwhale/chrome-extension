@@ -120,7 +120,7 @@ function sanitizeRequests(requests) {
   ]
 
   let willyStrings = ['load-saved-query']
-  let willyKeys = ['ad_copy', 'ad_image_url']
+  let willyKeys = ['ad_copy', 'ad_image_url', 'campaign_name', 'ad_set_name']
 
   Object.keys(req).forEach((key) => {
     keys.forEach((k) => {
