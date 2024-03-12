@@ -146,8 +146,6 @@ function sanitizeRequests(requests) {
 
             // set the data back to the request
             req[key] = JSON.stringify(data)
-
-            return
           } else {
             if (k === 'name' || k === 'productName') {
               // if name, only allow strings provided above
