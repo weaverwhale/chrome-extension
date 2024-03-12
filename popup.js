@@ -148,22 +148,22 @@ function sanitizeRequests(requests) {
             req[key] = JSON.stringify(data)
 
             return
-          }
-
-          if (k === 'name' || k === 'productName') {
-            // if name, only allow strings provided above
-            if (allowedNameString.filter((string) => key.includes(string)).length <= 0) {
-              return
+          } else {
+            if (k === 'name' || k === 'productName') {
+              // if name, only allow strings provided above
+              if (allowedNameString.filter((string) => key.includes(string)).length <= 0) {
+                return
+              }
             }
-          }
 
-          req[key] = req[key].replaceAll(re, `"${k}":"[REDACTED]"`)
+            req[key] = req[key].replaceAll(re, `"${k}":"[REDACTED]"`)
 
-          // conditional to sift escaped quotes
-          // only if they are "pre-esacped"
-          if (req[key].includes('/"')) {
-            const re2 = new RegExp(`\"${k}\":\s*\"[^"]+?([^\/"]+)\"`, 'g')
-            req[key] = req[key].replaceAll(re2, `\"${k}\":\"[REDACTED]\"`)
+            // conditional to sift escaped quotes
+            // only if they are "pre-esacped"
+            if (req[key].includes('/"')) {
+              const re2 = new RegExp(`\"${k}\":\s*\"[^"]+?([^\/"]+)\"`, 'g')
+              req[key] = req[key].replaceAll(re2, `\"${k}\":\"[REDACTED]\"`)
+            }
           }
         }
       } catch {}
