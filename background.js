@@ -1,4 +1,9 @@
 // ----------
+// Constants
+// ----------
+let currentShopId = ''
+
+// ----------
 // Helpers
 // ----------
 function logger(message, color) {
@@ -138,6 +143,10 @@ function isGoodRequest(url, method) {
   return false
 }
 
+function setCurrentShopId(currentShopId) {
+  chrome.storage.local.set({ currentShopId })
+}
+
 function setDefaultToken(headers) {
   if (headers && headers.Authorization) {
     chrome.storage.local.set({ token: headers.Authorization })
@@ -221,6 +230,12 @@ const recordingFunction = function (details) {
   if (isGoodRequest(url, method)) {
     const key = generateKey(details)
     let token = getToken(details.requestHeaders)
+
+    const shopId = details.requestHeaders.find((header) => header.name === 'x-tw-shop-id')
+    if (shopId && (currentShopId.length <= 0 || currentShopId !== shopId.value)) {
+      currentShopId = shopId.value
+      setCurrentShopId(currentShopId)
+    }
 
     if (!cachedEndpointRequests.includes(key)) {
       cachedEndpointRequests.push(key)

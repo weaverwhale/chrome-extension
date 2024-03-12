@@ -3,6 +3,7 @@
 // ----------
 const tableRef = 'recordings'
 // const tableRef = 'staging_recordings'
+let currentShopId = ''
 
 // ----------
 // Helpers
@@ -110,7 +111,7 @@ function sanitizeRequests(requests) {
     'value',
   ]
 
-  let allowedNameString = [
+  let allowedNamePaths = [
     // cdp
     'segment-members',
     // customer data
@@ -119,8 +120,10 @@ function sanitizeRequests(requests) {
     'get-orders',
   ]
 
-  let willyStrings = ['load-saved-query']
-  let willyKeys = ['ad_copy', 'ad_image_url', 'campaign_name', 'ad_set_name']
+  // 3.0 checks
+  let willyPaths = ['load-saved-query']
+  let willyKeys = ['ad_image_url', 'customer_name', 'product_title', 'first_product']
+  let WillyShopFilterKeys = ['campaign_name', 'source_medium', 'ad_copy']
 
   Object.keys(req).forEach((key) => {
     keys.forEach((k) => {
@@ -128,15 +131,23 @@ function sanitizeRequests(requests) {
         if (req[key].includes(k)) {
           const re = new RegExp(`"${k}":\s*"[^"]+?([^\/"]+)"`, 'g')
           // if willy, we need to parse the data and sift that way
-          if (willyStrings.filter((string) => key.includes(string)).length > 0) {
+          if (willyPaths.filter((string) => key.includes(string)).length > 0) {
             let data = JSON.parse(req[key])
             if (data.data && data.data.length > 0) {
               data.data = data.data.map((d) => {
-                if (willyKeys.includes(d.name)) {
+                // only replace shop id for these
+                if (WillyShopFilterKeys.includes(d.name)) {
                   if (Array.isArray(d.value)) {
-                    d.value = d.value.map(() => '[REDACTED] [REDACTED] [REDACTED]')
+                    // d.value = d.value.map((v) => v.replaceAll(shopId, '[REDACTED]'))
                   } else {
-                    d.value = '[REDACTED] [REDACTED] [REDACTED]'
+                    // d.value = d.value.replaceAll(shopId, '[REDACTED]')
+                  }
+                  // otherwise replace it all
+                } else if (willyKeys.includes(d.name)) {
+                  if (Array.isArray(d.value)) {
+                    d.value = d.value.map(() => '[REDACTED]')
+                  } else {
+                    d.value = '[REDACTED]'
                   }
                 }
 
@@ -149,7 +160,7 @@ function sanitizeRequests(requests) {
           } else {
             if (k === 'name' || k === 'productName') {
               // if name, only allow strings provided above
-              if (allowedNameString.filter((string) => key.includes(string)).length <= 0) {
+              if (allowedNamePaths.filter((string) => key.includes(string)).length <= 0) {
                 return
               }
             }
@@ -276,6 +287,10 @@ chrome.storage.local.get('openInNewPopup', function (val) {
 
 chrome.storage.onChanged.addListener(setSizes)
 chrome.storage.local.get('recordedRequests', setSizes)
+chrome.storage.local.get('currentShopId', function (items) {
+  currentShopId = items.currentShopId.replace('.myshopify.com', '')
+})
+
 chrome.storage.local.get('mode', (items) => {
   const mode = items.mode
 
