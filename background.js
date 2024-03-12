@@ -251,8 +251,13 @@ const recordingFunction = function (details) {
             let didntRecord = false
 
             if (res && (!res.includes('error') || !(res.error && res.error.length > 0))) {
-              const key = generateKey(details, params.body)
-              recordedRequests[key] = res
+              const keyWithBody = generateKey(details, params.body)
+              if (recordedRequests[key]) {
+                recordedRequests[keyWithBody] = res
+              } else {
+                recordedRequests[key] = res
+              }
+
               chrome.storage.local.set({ recordedRequests: recordedRequests })
               logger(`${details.method} request recorded: ${key}`, 'warning')
             } else {
@@ -277,15 +282,27 @@ const recordingFunction = function (details) {
 // ----------
 const playbackFunction = function (req) {
   if (isGoodRequest(req.url, req.method) && Object.keys(recordedRequests).length > 0) {
-    const key = generateKey(req)
-    if (key) {
-      const recordedResponse = recordedRequests[key]
+    const key = generateKey(req, true)
+    const keyWithoutBody = generateKey(req)
 
-      if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
-        logger(`${req.method} request intercepted: ${key}`, 'success')
+    console.log(req, key, keyWithoutBody)
+
+    if (key || keyWithoutBody) {
+      const recordedResponse = recordedRequests[key]
+      const recordedResponseWithoutBody = recordedRequests[keyWithoutBody]
+
+      if (recordedResponse || recordedResponseWithoutBody) {
+        logger(
+          `${req.method} request intercepted: ${
+            recordedResponseWithoutBody ? keyWithoutBody : key
+          }`,
+          'success',
+        )
 
         return {
-          redirectUrl: 'data:text/html;charset=utf-8,' + encodeURIComponent(recordedResponse),
+          redirectUrl:
+            'data:text/html;charset=utf-8,' +
+            encodeURIComponent(recordedResponse || recordedResponseWithoutBody),
         }
       } else {
         logger(`No recorded response for ${key}`, 'error')
