@@ -285,13 +285,14 @@ const playbackFunction = function (req) {
     const key = generateKey(req, true)
     const keyWithoutBody = generateKey(req)
 
-    console.log(req, key, keyWithoutBody)
-
     if (key || keyWithoutBody) {
       const recordedResponse = recordedRequests[key]
       const recordedResponseWithoutBody = recordedRequests[keyWithoutBody]
 
-      if (recordedResponse || recordedResponseWithoutBody) {
+      if (
+        (recordedResponse && !recordedResponse.indexOf('message') > -1) ||
+        (recordedResponseWithoutBody && !recordedResponseWithoutBody.indexOf('message') > -1)
+      ) {
         logger(
           `${req.method} request intercepted: ${
             recordedResponseWithoutBody ? keyWithoutBody : key
