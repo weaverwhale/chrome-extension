@@ -285,7 +285,9 @@ const recordingFunction = function (details) {
               // As well as on failure,
               // always remove POST requests from cache
               // to allow for new POSTS requests with different bodies to be recorded
-              cachedEndpointRequests = cachedEndpointRequests.filter((item) => item !== key)
+              cachedEndpointRequests = cachedEndpointRequests.filter(
+                (item) => item !== key && item !== keyWithBody,
+              )
             }
           })
         })
