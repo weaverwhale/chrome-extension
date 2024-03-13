@@ -209,7 +209,7 @@ const bodyRecordingFunction = function (details) {
     const key = generateKey(details)
 
     try {
-      logger(`Success caching body for: ${key}`, 'success')
+      logger(`Success caching body for: ${key}`, 'warning')
 
       cachedEndpointBodies[key] = JSON.parse(
         decodeURIComponent(
@@ -259,38 +259,42 @@ const recordingFunction = function (details) {
         params.body = JSON.stringify(cachedEndpointBodies[key])
       }
 
-      fetch(details.url, params)
-        .then((response) => response.text())
-        .then((res) => {
-          chrome.storage.local.get('recordedRequests', function (items) {
-            const recordedRequests = items.recordedRequests || {}
-            let didntRecord = false
+      try {
+        fetch(details.url, params)
+          .then((response) => response.text())
+          .then((res) => {
+            chrome.storage.local.get('recordedRequests', function (items) {
+              const recordedRequests = items.recordedRequests || {}
+              let didntRecord = false
 
-            if (res && (!res.includes('error') || !(res.error && res.error.length > 0))) {
-              const keyWithBody = generateKey(details, params.body)
-              if (recordedRequests[key]) {
-                recordedRequests[keyWithBody] = res
+              if (res && (!res.includes('error') || !(res.error && res.error.length > 0))) {
+                const keyWithBody = generateKey(details, params.body)
+                if (recordedRequests[key] && keyWithBody) {
+                  recordedRequests[keyWithBody] = res
+                } else {
+                  recordedRequests[key] = res
+                }
+
+                chrome.storage.local.set({ recordedRequests: recordedRequests })
+                logger(`${details.method} request recorded: ${key}`, 'success')
               } else {
-                recordedRequests[key] = res
+                logger(`${details.method} request could not be recorded: ${key}`, 'error')
+                didntRecord = true
               }
 
-              chrome.storage.local.set({ recordedRequests: recordedRequests })
-              logger(`${details.method} request recorded: ${key}`, 'warning')
-            } else {
-              logger(`${details.method} request could not be recorded: ${key}`, 'error')
-              didntRecord = true
-            }
-
-            if (method === 'POST' || didntRecord) {
-              // As well as on failure,
-              // always remove POST requests from cache
-              // to allow for new POSTS requests with different bodies to be recorded
-              cachedEndpointRequests = cachedEndpointRequests.filter(
-                (item) => item !== key && item !== keyWithBody,
-              )
-            }
+              if (method === 'POST' || didntRecord) {
+                // As well as on failure,
+                // always remove POST requests from cache
+                // to allow for new POSTS requests with different bodies to be recorded
+                cachedEndpointRequests = cachedEndpointRequests.filter(
+                  (item) => item !== key && item !== keyWithBody,
+                )
+              }
+            })
           })
-        })
+      } catch (e) {
+        logger(`Error recording request: ${e}`, 'error')
+      }
     }
   }
 }
