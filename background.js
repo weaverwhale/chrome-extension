@@ -1,4 +1,9 @@
 // ----------
+// Constants
+// ----------
+let currentShopId = ''
+
+// ----------
 // Helpers
 // ----------
 function logger(message, color) {
@@ -138,6 +143,10 @@ function isGoodRequest(url, method) {
   return false
 }
 
+function setCurrentShopId(currentShopId) {
+  chrome.storage.local.set({ currentShopId })
+}
+
 function setDefaultToken(headers) {
   if (headers && headers.Authorization) {
     chrome.storage.local.set({ token: headers.Authorization })
@@ -200,7 +209,7 @@ const bodyRecordingFunction = function (details) {
     const key = generateKey(details)
 
     try {
-      logger(`Success caching body for: ${key}`, 'success')
+      logger(`Success caching body for: ${key}`, 'warning')
 
       cachedEndpointBodies[key] = JSON.parse(
         decodeURIComponent(
@@ -223,6 +232,12 @@ const recordingFunction = function (details) {
     let token = getToken(details.requestHeaders)
     const cacheKey = `${key}${details.requestHeaders}`
 
+    const shopId = details.requestHeaders.find((header) => header.name === 'x-tw-shop-id')
+    if (shopId && (currentShopId.length <= 0 || currentShopId !== shopId.value)) {
+      currentShopId = shopId.value
+      setCurrentShopId(currentShopId)
+    }
+
     if (!cachedEndpointRequests.includes(cacheKey)) {
       cachedEndpointRequests.push(cacheKey)
 
@@ -244,29 +259,42 @@ const recordingFunction = function (details) {
         params.body = JSON.stringify(cachedEndpointBodies[key])
       }
 
-      fetch(details.url, params)
-        .then((response) => response.text())
-        .then((res) => {
-          chrome.storage.local.get('recordedRequests', function (items) {
-            const recordedRequests = items.recordedRequests || {}
+      try {
+        fetch(details.url, params)
+          .then((response) => response.text())
+          .then((res) => {
+            chrome.storage.local.get('recordedRequests', function (items) {
+              const recordedRequests = items.recordedRequests || {}
+              let didntRecord = false
 
-            if (res && !res.error && !res.includes('message') && !res.includes('error')) {
-              const key = generateKey(details, params.body)
-              recordedRequests[key] = res
-              chrome.storage.local.set({ recordedRequests: recordedRequests })
-              logger(`${details.method} request recorded: ${key}`, 'warning')
-            } else {
-              logger(`${details.method} request could not be recorded: ${key}`, 'error')
-            }
+              if (res && (!res.includes('error') || !(res.error && res.error.length > 0))) {
+                const keyWithBody = generateKey(details, params.body)
+                if (recordedRequests[key] && keyWithBody) {
+                  recordedRequests[keyWithBody] = res
+                } else {
+                  recordedRequests[key] = res
+                }
 
-            if (method === 'POST' || !res || res.error) {
-              // As well as on failure,
-              // always remove POST requests from cache
-              // to allow for new POSTS requests with different bodies to be recorded
-              cachedEndpointRequests = cachedEndpointRequests.filter((item) => item !== cacheKey)
-            }
+                chrome.storage.local.set({ recordedRequests: recordedRequests })
+                logger(`${details.method} request recorded: ${key}`, 'success')
+              } else {
+                logger(`${details.method} request could not be recorded: ${key}`, 'error')
+                didntRecord = true
+              }
+
+              if (method === 'POST' || didntRecord) {
+                // As well as on failure,
+                // always remove POST requests from cache
+                // to allow for new POSTS requests with different bodies to be recorded
+                cachedEndpointRequests = cachedEndpointRequests.filter(
+                  (item) => item !== key && item !== keyWithBody,
+                )
+              }
+            })
           })
-        })
+      } catch (e) {
+        logger(`Error recording request: ${e}`, 'error')
+      }
     }
   }
 }
@@ -277,14 +305,27 @@ const recordingFunction = function (details) {
 const playbackFunction = function (req) {
   if (isGoodRequest(req.url, req.method) && Object.keys(recordedRequests).length > 0) {
     const key = generateKey(req, true)
-    if (key) {
-      const recordedResponse = recordedRequests[key]
+    const keyWithoutBody = generateKey(req)
 
-      if (recordedResponse && !recordedResponse.indexOf('message') > -1) {
-        logger(`${req.method} request intercepted: ${key}`, 'success')
+    if (key || keyWithoutBody) {
+      const recordedResponse = recordedRequests[key]
+      const recordedResponseWithoutBody = recordedRequests[keyWithoutBody]
+
+      if (
+        (recordedResponse && !recordedResponse.indexOf('message') > -1) ||
+        (recordedResponseWithoutBody && !recordedResponseWithoutBody.indexOf('message') > -1)
+      ) {
+        logger(
+          `${req.method} request intercepted: ${
+            recordedResponseWithoutBody ? keyWithoutBody : key
+          }`,
+          'success',
+        )
 
         return {
-          redirectUrl: 'data:text/html;charset=utf-8,' + encodeURIComponent(recordedResponse),
+          redirectUrl:
+            'data:text/html;charset=utf-8,' +
+            encodeURIComponent(recordedResponse || recordedResponseWithoutBody),
         }
       } else {
         logger(`No recorded response for ${key}`, 'error')

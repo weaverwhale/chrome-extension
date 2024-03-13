@@ -3,6 +3,7 @@
 // ----------
 const tableRef = 'recordings'
 // const tableRef = 'staging_recordings'
+let currentShopId = ''
 
 // ----------
 // Helpers
@@ -109,7 +110,7 @@ function sanitizeRequests(requests) {
     'adsetName',
   ]
 
-  let allowedNameString = [
+  let allowedNamePaths = [
     // cdp
     'segment-members',
     // customer data
@@ -118,33 +119,66 @@ function sanitizeRequests(requests) {
     'get-orders',
   ]
 
+  // 3.0 checks
+  let willyPaths = ['load-saved-query']
+  let willyKeys = ['ad_image_url', 'customer_name', 'product_title', 'first_product']
+  let WillyShopFilterKeys = ['campaign_name', 'source_medium', 'ad_copy']
+
   Object.keys(req).forEach((key) => {
     keys.forEach((k) => {
       try {
         if (req[key].includes(k)) {
           const re = new RegExp(`"${k}":\s*"[^"]+?([^\/"]+)"`, 'g')
+          // if willy, we need to parse the data and sift that way
+          if (willyPaths.filter((string) => key.includes(string)).length > 0) {
+            let data = JSON.parse(req[key])
+            if (data.data && data.data.length > 0) {
+              data.data = data.data.map((d) => {
+                // only replace shop id for these
+                if (WillyShopFilterKeys.includes(d.name)) {
+                  if (Array.isArray(d.value)) {
+                    d.value = d.value.map((v) => v.replaceAll(currentShopId, '[REDACTED]'))
+                  } else {
+                    d.value = d.value.replaceAll(currentShopId, '[REDACTED]')
+                  }
+                  // otherwise replace it all
+                } else if (willyKeys.includes(d.name)) {
+                  if (Array.isArray(d.value)) {
+                    d.value = d.value.map(() => '[REDACTED]')
+                  } else {
+                    d.value = '[REDACTED]'
+                  }
+                }
 
-          if (k === 'name' || k === 'productName') {
-            // if name, only allow strings provided above
-            if (allowedNameString.filter((string) => key.includes(string)).length <= 0) {
-              return
+                return d
+              })
             }
-          }
 
-          req[key] = req[key].replaceAll(re, `"${k}":"[REDACTED]"`)
+            // set the data back to the request
+            req[key] = JSON.stringify(data)
+          } else {
+            if (k === 'name' || k === 'productName') {
+              // if name, only allow strings provided above
+              if (allowedNamePaths.filter((string) => key.includes(string)).length <= 0) {
+                return
+              }
+            }
 
-          // conditional to sift escaped quotes
-          // only if they are "pre-esacped"
-          if (req[key].includes('/"')) {
-            const re2 = new RegExp(`\"${k}\":\s*\"[^"]+?([^\/"]+)\"`, 'g')
-            req[key] = req[key].replaceAll(re2, `\"${k}\":\"[REDACTED]\"`)
+            req[key] = req[key].replaceAll(re, `"${k}":"[REDACTED]"`)
+
+            // conditional to sift escaped quotes
+            // only if they are "pre-esacped"
+            if (req[key].includes('/"')) {
+              const re2 = new RegExp(`\"${k}\":\s*\"[^"]+?([^\/"]+)\"`, 'g')
+              req[key] = req[key].replaceAll(re2, `\"${k}\":\"[REDACTED]\"`)
+            }
           }
         }
       } catch {}
     })
   })
 
-  return req
+  return requests
 }
 
 function getRecordings(db) {
@@ -252,6 +286,10 @@ chrome.storage.local.get('openInNewPopup', function (val) {
 
 chrome.storage.onChanged.addListener(setSizes)
 chrome.storage.local.get('recordedRequests', setSizes)
+chrome.storage.local.get('currentShopId', function (items) {
+  currentShopId = items.currentShopId.replace('.myshopify.com', '')
+})
+
 chrome.storage.local.get('mode', (items) => {
   const mode = items.mode
 
