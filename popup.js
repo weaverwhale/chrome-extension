@@ -108,7 +108,6 @@ function sanitizeRequests(requests) {
     'campaign',
     'campaignName',
     'adsetName',
-    'value',
   ]
 
   let allowedNamePaths = [
@@ -138,9 +137,9 @@ function sanitizeRequests(requests) {
                 // only replace shop id for these
                 if (WillyShopFilterKeys.includes(d.name)) {
                   if (Array.isArray(d.value)) {
-                    // d.value = d.value.map((v) => v.replaceAll(shopId, '[REDACTED]'))
+                    d.value = d.value.map((v) => v.replaceAll(currentShopId, '[REDACTED]'))
                   } else {
-                    // d.value = d.value.replaceAll(shopId, '[REDACTED]')
+                    d.value = d.value.replaceAll(currentShopId, '[REDACTED]')
                   }
                   // otherwise replace it all
                 } else if (willyKeys.includes(d.name)) {

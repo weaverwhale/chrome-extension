@@ -230,6 +230,7 @@ const recordingFunction = function (details) {
   if (isGoodRequest(url, method)) {
     const key = generateKey(details)
     let token = getToken(details.requestHeaders)
+    const cacheKey = `${key}${details.requestHeaders}`
 
     const shopId = details.requestHeaders.find((header) => header.name === 'x-tw-shop-id')
     if (shopId && (currentShopId.length <= 0 || currentShopId !== shopId.value)) {
@@ -237,8 +238,8 @@ const recordingFunction = function (details) {
       setCurrentShopId(currentShopId)
     }
 
-    if (!cachedEndpointRequests.includes(key)) {
-      cachedEndpointRequests.push(key)
+    if (!cachedEndpointRequests.includes(cacheKey)) {
+      cachedEndpointRequests.push(cacheKey)
 
       var params = {
         method: method,
