@@ -58,23 +58,45 @@ function setRecordings(recordings) {
     disabledOption.value = ''
     recordingsList.appendChild(disabledOption)
 
-    recordings.forEach((recording) => {
-      if (!recording.url || !recording.url.includes('.com')) return
+    chrome.storage.local.get('recordedRequests', function (items) {
+      const sanitizedRequests = sanitizeRequests(items.recordedRequests)
 
-      const option = document.createElement('option')
-      const view = recording.url.split('.com/')[1].split('/')[0].split('?')[0]
-      const store =
-        recording.url.split('shop-id=')[1]?.split('&')[0].replace('.myshopify.com', '') ?? ''
+      chrome.tabs.getSelected(null, async function (tab) {
+        const inCacheOption = document.createElement('option')
+        const title = 'Current Page Cache - ' + Object.keys(sanitizedRequests).length + ' requests'
+        inCacheOption.innerHTML = title
+        inCacheOption.value = JSON.stringify({
+          date: new Date(),
+          title: tab.title,
+          url: tab.url,
+          name: title,
+          recordings: sanitizedRequests,
+        })
+        recordingsList.appendChild(inCacheOption)
 
-      const generatedTitle = `${
-        recording.name?.length > 0 ? `${recording.name} - ` : store.length > 0 ? `${store} - ` : ''
-      }${recording.name?.length > 0 ? '' : `${view} - `}${recording.date
-        .toDate()
-        .toLocaleString('en-US')}`
+        recordings.forEach((recording) => {
+          if (!recording.url || !recording.url.includes('.com')) return
 
-      option.innerHTML = generatedTitle
-      option.value = JSON.stringify(recording)
-      recordingsList.appendChild(option)
+          const option = document.createElement('option')
+          const view = recording.url.split('.com/')[1].split('/')[0].split('?')[0]
+          const store =
+            recording.url.split('shop-id=')[1]?.split('&')[0].replace('.myshopify.com', '') ?? ''
+
+          const generatedTitle = `${
+            recording.name?.length > 0
+              ? `${recording.name} - `
+              : store.length > 0
+              ? `${store} - `
+              : ''
+          }${recording.name?.length > 0 ? '' : `${view} - `}${recording.date
+            .toDate()
+            .toLocaleString('en-US')}`
+
+          option.innerHTML = generatedTitle
+          option.value = JSON.stringify(recording)
+          recordingsList.appendChild(option)
+        })
+      })
     })
   }
 }

@@ -14,8 +14,12 @@
   display: grid;
   align-items: center;
   width: 100%;
-  grid-template-columns: 1fr 1fr;
-  grid-gap: 3px;
+  grid-template-columns: 3fr 1fr;
+  grid-gap: 5px;
+}
+
+#tw-extension .form-row + .form-row {
+  margin-top: 5px;
 }
 
 #tw-extension .checkbox {

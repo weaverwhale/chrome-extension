@@ -18,7 +18,7 @@
       <br /><br />
       <div class="form-row">
         <input id="name" placeholder="File Name" />
-        <button id="save" disabled>Save to Firebase</button>
+        <button id="save" disabled>Save</button>
         <div style="display: none" id="loading">
           <progress id="progress" style="display: block" max="100" value="0"></progress>
           <span>&#x23F3; Saving - <span id="percentage"></span></span>
@@ -26,12 +26,11 @@
         <span style="display: none" id="success">&#x2705; Saved</span>
         <span style="display: none" id="error">&#x274C; Error</span>
       </div>
-      <br />
       <div class="form-row">
         <select id="recordings">
           <option value="" disabled selected>Select a recording</option>
         </select>
-        <button id="load" disabled>Load from Firebase</button>
+        <button id="load" disabled>Load</button>
       </div>
       <div class="form-row">
         <div class="checkbox">
@@ -41,7 +40,7 @@
         <small id="version">
           <img src="./images/icon.png" width="11" height="11" />
           <!-- match manifest -->
-          v1.3.0
+          v1.4.0
         </small>
       </div>
     </div>

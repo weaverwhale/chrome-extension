@@ -21,7 +21,8 @@ function contains(selector, text) {
 }
 
 function wrapRedacted() {
-  const shopImage = document.querySelector('img[alt="shop logo"]')
+  const shopImage =
+    document.querySelector('img[alt="shop logo"]') || document.querySelector('img[src*=shop-icon]')
 
   // try to find shop name
   try {
@@ -32,7 +33,9 @@ function wrapRedacted() {
 
   // more sleazy way, but more reliable actually
   try {
-    const shopImage = document.querySelector('img[alt="shop logo"]')
+    const shopImage =
+      document.querySelector(`img[src*="shop logo"]`) ||
+      document.querySelector('img[src*=shop-icon]')
     if (shopImage && fallbackShopName === '') {
       fallbackShopName =
         // YIKES!!
@@ -77,6 +80,7 @@ function wrapRedacted() {
 // ----------
 document.addEventListener('DOMContentLoaded', function () {
   var styleSheet = document.createElement('style')
+
   // css blurring
   // and "last resort" css redaction
   styleSheet.innerText = `
@@ -92,12 +96,15 @@ document.addEventListener('DOMContentLoaded', function () {
     #tw-playback .attribution-collapsible img,
     #tw-playback .timeline-item-link a,
     #tw-playback .attribution-orders-table td .Polaris-Link,
-    #tw-playback .mantine-AppShell-section:first-of-type .mantine-Text-root
+    #tw-playback .mantine-AppShell-section:first-of-type .mantine-Text-root,
+    #tw-playback img[src*=shop-icon],
+    #tw-playback img[src*=shop-icon] + div[class*="mantine-Flex-root"]
     {
       filter: blur(5px);
     }
 
     #tw-playback .tw-image,
+     #tw-playback img[src*=shop-icon],
     #tw-playback .mantine-Group-root
     {
       overflow: hidden;
