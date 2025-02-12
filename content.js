@@ -57,6 +57,8 @@ function wrapRedacted() {
 
   // backend and "default" redaction
   ;['[REDACTED]', '[REDACTED] [REDACTED]', shopName, fallbackShopName].forEach(function (text) {
+    if (!text) return
+
     const redactedText = contains(
       'h1, h2, h3, h4, h5, h6, p, div, span, button, a, text',
       text,

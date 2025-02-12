@@ -42,6 +42,10 @@ function setSizes() {
   })
 }
 
+function getShopId(url) {
+  return url ? url.replace('.myshopify.com', '').replace('mybigcommerce.com', '') : ''
+}
+
 function setRecordings(recordings) {
   const recordingsList = document.getElementById('recordings')
   recordingsList.innerHTML = ''
@@ -79,8 +83,8 @@ function setRecordings(recordings) {
 
           const option = document.createElement('option')
           const view = recording.url.split('.com/')[1].split('/')[0].split('?')[0]
-          const store =
-            recording.url.split('shop-id=')[1]?.split('&')[0].replace('.myshopify.com', '') ?? ''
+          const storeUrl = recording.url.split('shop-id=')[1]?.split('&')[0]
+          const store = getShopId(storeUrl)
 
           const generatedTitle = `${
             recording.name?.length > 0
@@ -158,13 +162,15 @@ function sanitizeRequests(requests) {
               data.data = data.data.map((d) => {
                 // only replace shop id for these
                 if (WillyShopFilterKeys.includes(d.name)) {
+                  if (!d.value) d.value = ''
                   if (Array.isArray(d.value)) {
                     d.value = d.value.map((v) => v.replaceAll(currentShopId, '[REDACTED]'))
-                  } else {
+                  } else if (d.value) {
                     d.value = d.value.replaceAll(currentShopId, '[REDACTED]')
                   }
                   // otherwise replace it all
                 } else if (willyKeys.includes(d.name)) {
+                  if (!d.value) d.value = ''
                   if (Array.isArray(d.value)) {
                     d.value = d.value.map(() => '[REDACTED]')
                   } else {
@@ -185,6 +191,8 @@ function sanitizeRequests(requests) {
                 return
               }
             }
+
+            if (!req[key]) return
 
             req[key] = req[key].replaceAll(re, `"${k}":"[REDACTED]"`)
 
@@ -309,7 +317,8 @@ chrome.storage.local.get('openInNewPopup', function (val) {
 chrome.storage.onChanged.addListener(setSizes)
 chrome.storage.local.get('recordedRequests', setSizes)
 chrome.storage.local.get('currentShopId', function (items) {
-  currentShopId = items.currentShopId.replace('.myshopify.com', '')
+  if (!items.currentShopId) return
+  currentShopId = getShopId(items.currentShopId)
 })
 
 chrome.storage.local.get('mode', (items) => {
