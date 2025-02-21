@@ -112,13 +112,12 @@ document.addEventListener('DOMContentLoaded', function () {
       overflow: hidden;
     }
 
-    #tw-playback .mantine-AppShell-navbar .relative,
     #tw-playback .mantine-Avatar-root {
       position: relative;
     }
 
     #tw-playback .tw-image:after,
-    #tw-playback .mantine-AppShell-navbar .relative:after,
+    #tw-playback .mantine-AppShell-navbar .stores-switcher-activator .relative:after,
     #tw-playback .mantine-Avatar-root:after
     {
       content: '';
